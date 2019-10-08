@@ -25,6 +25,8 @@ body {
     padding: 12px;
     border: none;
     border-bottom: 1px #eee solid;
+    position: sticky;
+    top: 0;
 }
 
 #myInput:focus {
