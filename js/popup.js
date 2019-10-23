@@ -1,6 +1,8 @@
-console.log('Popup.js is running!');
-
 $(function () {
+
+  function focus() {
+    $('#myInput').focus();
+  }
 
   /* Chrome Management */
 
@@ -8,13 +10,8 @@ $(function () {
     // Set Search Box Placeholder
     $('#myInput').attr('placeholder', `Search ${info.length} extensions`);
 
-    console.log()
-    console.log(`%cchrome.management.getAll info: ${JSON.stringify(info, null, '\t')}`, 'color: limegreen; font-size: .8rem; background: #000')
-    console.log()
-
     // Operate DOM and Append Elements Dynamically
     info.forEach(element => {
-
       // Get Each Extension's Info
       let shortName = element.shortName;
       let id = element.id;
@@ -36,7 +33,8 @@ $(function () {
               <button class="uninstall" id="${id}">REMOVE</button>
             </div>`);
     });
-    // console.log(info);
+
+    focus();
   });
 
 
@@ -46,27 +44,17 @@ $(function () {
   // Click uninstall btn
   $('.container').on('click', '.uninstall', function () {
     var id = $(this).attr('id');
-    chrome.management.uninstall(id, {showConfirmDialog: true} , function () {
-      console.log(`Uninstall ${id}`);
-    });
+    chrome.management.uninstall(id, {showConfirmDialog: true});
   });
 
   // Checkbox Change Event
   $('.container').on('change', '.isEnabled', function () {
     if ($(this).is(':checked')) {
-      // console.log("false->true: " + $(this).attr('id'));
-
       $(this).next().next().removeClass('shortName_').addClass('shortName_checked');
-      chrome.management.setEnabled($(this).attr('id'), true, function () {
-        console.log('false -> true');
-      });
+      chrome.management.setEnabled($(this).attr('id'), true);
     } else {
-      // console.log("true->false: " + $(this).attr('id'));
-
       $(this).next().next().removeClass('shortName_checked').addClass('shortName_');
-      chrome.management.setEnabled($(this).attr('id'), false, function () {
-        console.log('true -> false');
-      });
+      chrome.management.setEnabled($(this).attr('id'), false);
     }
   });
 

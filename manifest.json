@@ -19,8 +19,5 @@
     "48": "assets/images/switch48.png",
     "128": "assets/images/switch128.png"
   },
-  "background": {
-    "scripts": ["js/background.js"]
-  },
   "manifest_version": 2
 }
