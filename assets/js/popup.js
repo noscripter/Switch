@@ -15,6 +15,10 @@ $(function () {
     info.forEach(element => {
       // Get Each Extension's Info
       let shortName = element.shortName;
+      let title = shortName;
+      if (shortName.length > 15) {
+        shortName = shortName.slice(0, 12) + '...'
+      }
       let id = element.id;
       let elementEnabled = element.enabled;
       let enabled = "";
@@ -33,7 +37,7 @@ $(function () {
         `<div class="extension">
           <input type="checkbox" class="isEnabled" id="${id}" ${enabled} />
           <img class="icons" id="${shortName}_icon" src=${icons} />
-          <a class="link" href="${homepageUrl}" target="_blank" title=${shortName}>
+          <a class="link" href="${homepageUrl}" target="_blank" title=${title}>
             <span class="shortName_${enabled} mySpan" href="${homepageUrl}">
             ${shortName}
             </span>
