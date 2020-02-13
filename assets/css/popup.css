@@ -21,9 +21,7 @@ body {
 
 .extension {
     background: #fff;
-    margin-top: 10px;
-    margin-left: 8px;
-    position: relative;
+    margin: 10px;
 }
 
 .extension .link {
@@ -99,15 +97,13 @@ a:hover {
 }
 
 .uninstall {
-    position: absolute;
     margin-right: 15px;
     border: 1px #000 solid;
     background: #fff;
     color: #000;
     border-radius: 2px;
     cursor: pointer;
-    right: 0;
-    top: 5px;
+    float: right;
 }
 
 .uninstall:hover {
