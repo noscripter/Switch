@@ -21,7 +21,6 @@ body {
 
 .extension {
     background: #fff;
-    height: 30px;
     margin-top: 10px;
     margin-left: 8px;
     position: relative;
@@ -91,14 +90,6 @@ a:hover {
 
 .shortName_ {
     color: rgb(198, 198, 198);
-    max-width: 210px;
-    display: inline-block;
-    height: 30px;
-    vertical-align: middle;
-    line-height: 30px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .highlight {
