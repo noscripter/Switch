@@ -1,7 +1,7 @@
 {
   "name": "Switch",
-  "version": "1.0",
-  "description": "Chrome Extensions Switch!",
+  "version": "1.0.0",
+  "description": "Chrome extensions Switch!",
   "permissions": ["management"],
   "browser_action": {
     "default_popup": "assets/popup.html",
