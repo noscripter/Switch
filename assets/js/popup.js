@@ -8,14 +8,7 @@ $(function () {
     // Set Search Box Placeholder
     $('#myInput').attr('placeholder', `Search ${info.length} extensions`);
 
-    let TOTAL = info.length;
-    let containerContent = `<div class="summary">
-      <span id="enabled">{{ENALBED}}</span>/
-      <span id="total">
-      ${TOTAL}
-      </span>
-      </h3>
-    </div>`;
+    let containerContent = '';
 
     let count = 0;
     // Operate DOM and Append Elements Dynamically
@@ -49,20 +42,18 @@ $(function () {
         </div>`;
     });
 
-    $('.container').append(containerContent.replace("{{ENALBED}}", count));
+    containerContent = `<div class="summary">
+      <span id="enabled">${count}</span>/
+      <span id="total">
+      ${info.length}
+      </span>
+      </h3>
+    </div>` + containerContent;
+
+    $('.container').append(containerContent);
 
     focus();
   });
-
-  function decreaseTotal() {
-    $('#total').html(parseInt($('#total').html()) - 1);
-  }
-
-  function updateEnabled(target) {
-    if ($(target).parent('div').find('input').attr('checked') === 'checked') {
-      decreaseEnabled()
-    }
-  }
 
   function increaseEnabled() {
     let enabled = parseInt($('#enabled').html()) || 0;
@@ -79,10 +70,12 @@ $(function () {
   // Click uninstall btn
   $('.container').on('click', '.uninstall', function () {
     let id = $(this).attr('id');
-    chrome.management.uninstall(id, {showConfirmDialog: true});
+    $('#total').html(parseInt($('#total').html()) - 1);
+    if ($(target).parent('div').find('input').attr('checked') === 'checked') {
+      decreaseEnabled()
+    }
 
-    decreaseTotal();
-    updateEnabled(this);
+    chrome.management.uninstall(id, {showConfirmDialog: true});
   });
 
   // Checkbox Change Event
