@@ -20,6 +20,9 @@ body {
 }
 
 .extension {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     background: #fff;
     margin: 10px;
 }
@@ -37,6 +40,8 @@ body {
     height: 16px;
     vertical-align: middle;
     margin: 0 4px;
+    position: absolute;
+    left: 68px;
 }
 
 #myInput {
