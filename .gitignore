@@ -1,3 +1,4 @@
 
 .vscode/last.sql
 node_modules
+.DS_Store
