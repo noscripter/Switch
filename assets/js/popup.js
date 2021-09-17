@@ -83,6 +83,7 @@ function extensionItemTemplate(extension) {
 }
 
 function getAllExtensions() {
+  $('#search').val('')
   container.html('<div class="loading">loading...</div>')
 
   chrome.management.getAll(function (extensions) {
@@ -156,8 +157,22 @@ $(function () {
         const currentTarget = $(element)
         const name = currentTarget.attr('extName')
 
+        if (currentTarget.find('.highlight').length !== 0) {
+          currentTarget
+            .find('.highlight')
+            .replaceWith(currentTarget.find('.highlight').html());
+        }
+
         if (name.toUpperCase().indexOf(keyword) > -1) {
           currentTarget.css('display', 'flex');
+
+          const regex = RegExp(`${keyword}`, "i");
+          currentTarget
+            .find('span.extNameSpan')
+            .html(
+              currentTarget.find('span.extNameSpan').html()
+              .replace(regex, `<span class="highlight">$&</span>`)
+            );
         } else {
           currentTarget.css('display', 'none')
         }
