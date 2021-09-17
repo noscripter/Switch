@@ -17,7 +17,6 @@ body {
   text-align: right;
   padding: 10px 20px;
   font-weight: bolder;
-  margin-right: -20px;
   font-size: 14px;
 }
 
@@ -69,7 +68,8 @@ body {
 }
 
 .container {
-  width: 300px;
+  width: 340px;
+  position: relative;
 }
 
 #search {
@@ -125,9 +125,10 @@ a:hover {
 }
 
 .highlight {
-  background: #FFE50D;
-  font-weight: bold;
-  font-size: 1.1em;
+  background: #e2940c;
+  font-weight: bolder;
+  font-size: 14px;
+  color: #EEE;
 }
 
 .uninstall {

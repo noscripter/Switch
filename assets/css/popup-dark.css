@@ -1,0 +1,39 @@
+body {
+  background: #000;
+  color: #FFF;
+}
+
+#search {
+  padding: 15px 5px 5px 5px;
+  margin-left: -5px;
+  color: limegreen;
+}
+
+.loading {
+  color: limegreen;
+}
+
+.summary #total {
+  color: gold;
+}
+
+.extension {
+  background: #000;
+  color: #FFF;
+}
+
+.shortNameChecked {
+  color: limegreen;
+}
+
+.extNameSpan:hover {
+  color: green;
+}
+
+.uninstall {
+  background-color: #680000;
+}
+
+.uninstall {
+  background-color: #F00;
+}

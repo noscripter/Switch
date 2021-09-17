@@ -20,8 +20,9 @@ function validIconURL(icons) {
  * @return {string} shortened extension name
  */
 function shortExtensionName(shortName) {
-  if (shortName.length > 32) {
-    return shortName.slice(0, 32)
+  const limit = 18
+  if (shortName.length > limit) {
+    return shortName.slice(0, limit)
   }
   return  shortName
 }
