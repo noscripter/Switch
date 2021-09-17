@@ -1,133 +1,166 @@
-$(function () {
-  function focus() {
-    $('#myInput').focus();
+let search
+let container
+let loading
+
+/**
+ * get validIconURL
+ * @param {array} icons -- icons array
+ * @return {string} valid icon URL
+ */
+function validIconURL(icons) {
+  if (icons && icons[0] && icons[0].url) {
+    return icons[0].url
   }
+  return '/assets/images/null.jpg'
+}
 
-  /* Chrome Management */
-  chrome.management.getAll(function (info) {
-    // Set Search Box Placeholder
-    $('#myInput').attr('placeholder', `Search ${info.length} extensions`);
+/**
+ * get shorted extension name
+ * @param {string} shortName -- short extension name
+ * @return {string} shortened extension name
+ */
+function shortExtensionName(shortName) {
+  if (shortName.length > 32) {
+    return shortName.slice(0, 32)
+  }
+  return  shortName
+}
 
-    let containerContent = '';
+/**
+ * generate extension item template
+ * @param {object} extension -- extension info object
+ * @return {string} extension item template HTML
+ */
+function extensionItemTemplate(extension) {
+  const {
+    shortName,   // 扩展名
+    id,          // 扩展 id
+    enabled,     // 是否启用
+    homepageUrl, // 扩展主页地址
+    icons,       // 扩展图标
+    version,     // 扩展版本号
+  } = extension
 
-    let count = 0;
-    // Operate DOM and Append Elements Dynamically
-    info.forEach(element => {
-      // Get Each Extension's Info
-      let shortName = element.shortName;
-      let title = shortName;
-      if (shortName.length > 32) {
-        shortName = shortName.slice(0, 32) + '...'
-      }
-      let id = element.id;
-      let elementEnabled = element.enabled;
-      let enabled = "";
-      if (elementEnabled) {
-        enabled = "checked";
-        count++;
-      }
-      let description = element.description;
-      let homepageUrl = element.homepageUrl;
-      let icons = "/assets/images/null.jpg";
-      if (typeof (element.icons) !== "undefined") {
-        icons = element.icons[0].url;
-      }
-
-      containerContent +=
-        `<div class="extension">
-          <input type="checkbox" class="isEnabled" id="${id}" ${enabled} />
-          <img class="icons" id="${shortName}_icon" src=${icons} />
-          <a class="link" href="${homepageUrl}" target="_blank" title=${title}>
-            <span class="shortName_${enabled} mySpan" href="${homepageUrl}">
-            ${shortName}
-            </span>
-          </a>
-          <button class="uninstall" id="${id}">REMOVE</button>
-        </div>`;
-    });
-
-    containerContent = `<div class="summary">
-      <span id="enabled">${count}</span>/
-      <span id="total">
-      ${info.length}
+  return `
+    <div
+      class="extension"
+      extId="${id}"
+      extName="${shortName}"
+    >
+      <input
+        type="checkbox"
+        class="isEnabled"
+        id=${id}
+        ${enabled ? "checked" : ""}
+        isEnabled="${enabled ? true : false}"
+      />
+      <img
+        class="icons"
+        id="${shortName}_icon"
+        src=${validIconURL(icons)}
+      />
+      <a
+        class="link"
+        href="${homepageUrl}"
+        target="_blank"
+      >
+        <span
+          class="shortName${enabled ? "Checked" : ""} extNameSpan"
+          title="${shortName}"
+          id="shortName${id}"
+        >
+        ${shortExtensionName(shortName)}@${version}
+        </span>
+      </a>
+      <span
+        class="uninstall"
+        id="${id}"
+        isEnabled="${enabled ? true : false}"
+      >
       </span>
-      </h3>
-    </div>` + containerContent;
+    </div>
+  `
+}
 
-    $('.container').append(containerContent);
+function getAllExtensions() {
+  container.html('<div class="loading">loading...</div>')
 
-    focus();
+  chrome.management.getAll(function (extensions) {
+    search
+      .attr('placeholder', `Search ${extensions.length} extensions`);
+
+    let extensionsList = ''
+    let enabledCount = 0
+
+    extensions
+      //.filter(extension => extension.enabled)
+      .forEach(extension => {
+        if (extension.enabled) {
+          enabledCount++
+        }
+        extensionsList += extensionItemTemplate(extension)
+      })
+
+    const summary = `
+      <div class="summary">
+        <span id="enabled">${enabledCount}</span>/
+        <span id="total">
+        ${extensions.length}
+        </span>
+        </h3>
+      </div>
+    `
+
+    loading = $('.loading')
+    loading.hide()
+    container.append(summary + extensionsList)
+    search.focus()
   });
+}
 
-  function increaseEnabled() {
-    let enabled = parseInt($('#enabled').html()) || 0;
-    $('#enabled').html(enabled >= 0 ? enabled + 1 : 0);
-  }
+$(function () {
+  search = $('#search');
+  container = $('.container')
+  getAllExtensions()
 
-  function decreaseEnabled() {
-    let enabled = parseInt($('#enabled').html()) || 0;
-    $('#enabled').html(enabled > 0 ? enabled - 1 : 0);
-  }
+  container.on('click', '.uninstall', function() {
+    const currentTarget = $(this)
+    const id = currentTarget.attr('id');
 
-  /* Events */
-
-  // Click uninstall btn
-  $('.container').on('click', '.uninstall', function () {
-    let id = $(this).attr('id');
-    $('#total').html(parseInt($('#total').html()) - 1);
-    if ($(target).parent('div').find('input').attr('checked') === 'checked') {
-      decreaseEnabled()
-    }
-
-    chrome.management.uninstall(id, {showConfirmDialog: true});
-  });
-
-  // Checkbox Change Event
-  $('.container').on('change', '.isEnabled', function () {
-    if ($(this).is(':checked')) {
-      $(this).next().next().removeClass('shortName_').addClass('shortName_checked');
-      chrome.management.setEnabled($(this).attr('id'), true);
-      increaseEnabled();
-    } else {
-      $(this).next().next().removeClass('shortName_checked').addClass('shortName_');
-      chrome.management.setEnabled($(this).attr('id'), false);
-      decreaseEnabled();
-    }
-  });
-
-  // Keyup Event
-  $('#myInput').keyup(function searchExtensions() {
-    let keyword = $(this).val();
-    let input = $(this).val().toUpperCase();
-    let cnt = $('.container');
-    let extensions = $('div.extension');
-    let shortName = "";
-
-    extensions.each(function (index, element) {
-      shortName = $(element).find('span.mySpan').text();
-
-      // Clear highlight span
-      if ($(element).find('.highlight').length !== 0) {
-        $(element)
-          .find('.highlight')
-          .replaceWith($(element).find('.highlight').html());
-      }
-
-      // Highlight keyword and Change display
-      if (shortName.toUpperCase().indexOf(input) > -1) {
-        $(element).css('display', "block");
-
-        // Highlight
-        let regex = RegExp(`${keyword}`, "i");
-        $(element)
-          .find('span.mySpan')
-          .html(
-            $(element).find('span.mySpan').html()
-            .replace(regex, `<span class=\"highlight\">$&</span>`)
-          );
-      } else {
-        $(element).css('display', "none");
-      }
+    chrome.management.uninstall(id, {showConfirmDialog: true}, function() {
+      getAllExtensions()
     });
   });
+
+  container.on('change', '.isEnabled', function () {
+    const currentTarget = $(this)
+    const isEnabled = currentTarget.attr('isEnabled')
+    const id = currentTarget.attr('id')
+    if (isEnabled === 'false') {
+      chrome.management.setEnabled(id, true, function() {
+        getAllExtensions()
+      });
+    } else {
+      chrome.management.setEnabled(id, false, function() {
+        getAllExtensions()
+      });
+    }
+  });
+
+  $('#search').keyup(
+    function searchExtensions() {
+      const keyword = $(this).val().toUpperCase();
+      const extensions = $('div.extension');
+
+      extensions.each(function(_index, element) {
+        const currentTarget = $(element)
+        const name = currentTarget.attr('extName')
+
+        if (name.toUpperCase().indexOf(keyword) > -1) {
+          currentTarget.css('display', 'flex');
+        } else {
+          currentTarget.css('display', 'none')
+        }
+      });
+    })
 });
