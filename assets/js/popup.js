@@ -16,8 +16,8 @@ $(function () {
       // Get Each Extension's Info
       let shortName = element.shortName;
       let title = shortName;
-      if (shortName.length > 15) {
-        shortName = shortName.slice(0, 12) + '...'
+      if (shortName.length > 32) {
+        shortName = shortName.slice(0, 32) + '...'
       }
       let id = element.id;
       let elementEnabled = element.enabled;
