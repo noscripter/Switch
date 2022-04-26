@@ -1,6 +1,6 @@
 {
   "name": "Switch",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "Chrome extensions Switch!",
   "permissions": ["management"],
   "browser_action": {
@@ -19,5 +19,5 @@
     "48": "assets/images/switch48.png",
     "128": "assets/images/switch128.png"
   },
-  "manifest_version": 2
+  "manifest_version": 3
 }

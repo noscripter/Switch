@@ -88,6 +88,7 @@ function getAllExtensions() {
   container.html('<div class="loading">loading...</div>')
 
   chrome.management.getAll(function (extensions) {
+    console.log('extensions', extensions)
     search
       .attr('placeholder', `Search ${extensions.length} extensions`);
 
