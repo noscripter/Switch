@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "description": "Chrome extensions Switch!",
   "permissions": ["management"],
-  "browser_action": {
+  "action": {
     "default_popup": "assets/popup.html",
     "default_icon": {
       "16": "assets/images/switch16.png",
