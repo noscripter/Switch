@@ -73,12 +73,14 @@ function extensionItemTemplate(extension) {
         ${shortExtensionName(shortName)}@${version}
         </span>
       </a>
+      <!--
       <span
         class="uninstall"
         id="${id}"
         isEnabled="${enabled ? true : false}"
       >
       </span>
+      -->
     </div>
   `
 }
