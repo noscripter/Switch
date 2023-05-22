@@ -143,11 +143,11 @@ $(function () {
     const id = currentTarget.attr('id')
     if (isEnabled === 'false') {
       chrome.management.setEnabled(id, true, function() {
-        getAllExtensions()
+        //getAllExtensions()
       });
     } else {
       chrome.management.setEnabled(id, false, function() {
-        getAllExtensions()
+        //getAllExtensions()
       });
     }
   });
