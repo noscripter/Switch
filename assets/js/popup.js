@@ -2,6 +2,14 @@ let search
 let container
 let loading
 
+let management
+
+if (chrome && chrome.management) {
+  management = chrome.management
+} else {
+  management = browser.management
+}
+
 /**
  * get validIconURL
  * @param {array} icons -- icons array
@@ -33,63 +41,81 @@ function shortExtensionName(shortName) {
  * @return {string} extension item template HTML
  */
 function extensionItemTemplate(extension) {
-  const {
-    shortName,   // 扩展名
-    id,          // 扩展 id
-    enabled,     // 是否启用
-    homepageUrl, // 扩展主页地址
-    icons,       // 扩展图标
-    version,     // 扩展版本号
-  } = extension
+  try {
+    let {
+      name,
+      shortName,   // 扩展名
+      id,          // 扩展 id
+      enabled,     // 是否启用
+      homepageUrl, // 扩展主页地址
+      icons,       // 扩展图标
+      version,     // 扩展版本号
+    } = extension
 
-  return `
-    <div
-      class="extension"
-      extId="${id}"
-      extName="${shortName}"
-    >
-      <input
-        type="checkbox"
-        class="isEnabled"
-        id=${id}
-        ${enabled ? "checked" : ""}
-        isEnabled="${enabled ? true : false}"
-      />
-      <img
-        class="icons"
-        id="${shortName}_icon"
-        src=${validIconURL(icons)}
-      />
-      <a
-        class="link"
-        href="${homepageUrl}"
-        target="_blank"
+    if (!shortName && name) {
+      shortName = name
+    }
+
+    const validIcon = validIconURL(icons)
+
+    return `
+      <div
+        class="extension"
+        extId="${id}"
+        extName="${shortName}"
       >
-        <span
-          class="shortName${enabled ? "Checked" : ""} extNameSpan"
-          title="${shortName}"
-          id="shortName${id}"
+        <input
+          type="checkbox"
+          class="isEnabled"
+          id=${id}
+          ${enabled ? "checked" : ""}
+          isEnabled="${enabled ? true : false}"
+        />
+        ${
+          validIcon
+          ?
+          `
+          <img
+            class="icons"
+            id="${shortName}_icon"
+            src=${validIcon}
+          />`
+          :
+          ""
+        }
+        <a
+          class="link"
+          href="${homepageUrl}"
+          target="_blank"
         >
-        ${shortExtensionName(shortName)}@${version}
+          <span
+            class="shortName${enabled ? "Checked" : ""} extNameSpan"
+            title="${shortName}"
+            id="shortName${id}"
+          >
+          ${shortExtensionName(shortName)}@${version}
+          </span>
+        </a>
+        <!--
+        <span
+          class="uninstall"
+          id="${id}"
+          isEnabled="${enabled ? true : false}"
+        >
         </span>
-      </a>
-      <!--
-      <span
-        class="uninstall"
-        id="${id}"
-        isEnabled="${enabled ? true : false}"
-      >
-      </span>
-      -->
-    </div>
-  `
+        -->
+      </div>
+    `
+  } catch (e) {
+    debugger
+  }
 }
 
 function getAllExtensions() {
   $('#search').val('')
   container.html('<div class="loading">loading...</div>')
 
-  chrome.management.getAll(function (extensions) {
+  management.getAll(function (extensions) {
     console.log('extensions', extensions)
     search
       .attr('placeholder', `Search ${extensions.length} extensions`);
@@ -132,7 +158,7 @@ $(function () {
     const currentTarget = $(this)
     const id = currentTarget.attr('id');
 
-    chrome.management.uninstall(id, {showConfirmDialog: true}, function() {
+    management.uninstall(id, {showConfirmDialog: true}, function() {
       getAllExtensions()
     });
   });
@@ -142,11 +168,11 @@ $(function () {
     const isEnabled = currentTarget.attr('isEnabled')
     const id = currentTarget.attr('id')
     if (isEnabled === 'false') {
-      chrome.management.setEnabled(id, true, function() {
+      management.setEnabled(id, true, function() {
         //getAllExtensions()
       });
     } else {
-      chrome.management.setEnabled(id, false, function() {
+      management.setEnabled(id, false, function() {
         //getAllExtensions()
       });
     }
