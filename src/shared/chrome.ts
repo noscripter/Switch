@@ -35,3 +35,11 @@ export const getRuntimeUrl = (path: string) => {
   }
   return path;
 };
+
+export const getRuntimeOrigin = () => {
+  try {
+    return new URL(getRuntimeUrl("")).origin;
+  } catch {
+    return null;
+  }
+};

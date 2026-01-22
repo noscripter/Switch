@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getManagement, getRuntimeUrl } from "../shared/chrome";
+import { getManagement, getRuntimeOrigin, getRuntimeUrl } from "../shared/chrome";
 import type { ExtensionInfo, IconInfo } from "../shared/types";
 
 const NAME_LIMIT = 18;
@@ -15,9 +15,20 @@ const getDisplayName = (extension: ExtensionInfo) => {
   return extension.shortName || extension.name || "Unknown";
 };
 
-const getIconUrl = (icons?: IconInfo[]) => {
+const getIconUrl = (icons: IconInfo[] | undefined, runtimeOrigin: string | null) => {
   if (icons && icons[0] && icons[0].url) {
-    return icons[0].url;
+    const iconUrl = icons[0].url;
+    if (iconUrl.startsWith("moz-extension://") && runtimeOrigin) {
+      try {
+        const iconOrigin = new URL(iconUrl).origin;
+        if (iconOrigin !== runtimeOrigin) {
+          return getRuntimeUrl("images/null.jpg");
+        }
+      } catch {
+        return getRuntimeUrl("images/null.jpg");
+      }
+    }
+    return iconUrl;
   }
   return getRuntimeUrl("images/null.jpg");
 };
@@ -111,6 +122,8 @@ const App = () => {
     });
   };
 
+  const runtimeOrigin = getRuntimeOrigin();
+
   return (
     <>
       <div id="input-holder">
@@ -135,7 +148,7 @@ const App = () => {
           ? filtered.map((extension) => {
               const displayName = getDisplayName(extension);
               const shortenedName = truncateName(displayName);
-              const iconUrl = getIconUrl(extension.icons);
+              const iconUrl = getIconUrl(extension.icons, runtimeOrigin);
               const className = `${
                 extension.enabled ? "shortNameChecked" : "shortName"
               } extNameSpan`;
@@ -170,6 +183,11 @@ const App = () => {
                     id={`${displayName}_icon`}
                     src={iconUrl}
                     alt=""
+                    onError={(event) => {
+                      const target = event.currentTarget;
+                      target.onerror = null;
+                      target.src = getRuntimeUrl("images/null.jpg");
+                    }}
                   />
                   {extension.homepageUrl ? (
                     <a className="link" href={extension.homepageUrl} target="_blank" rel="noreferrer">
