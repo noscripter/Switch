@@ -1,0 +1,25 @@
+{
+  "name": "Switch",
+  "version": "3.0.0",
+  "description": "Chrome extensions Switch!",
+  "permissions": [
+    "management"
+  ],
+  "browser_action": {
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "images/switch16.png",
+      "32": "images/switch32.png",
+      "48": "images/switch48.png",
+      "128": "images/switch128.png"
+    },
+    "default_title": "Switch!"
+  },
+  "icons": {
+    "16": "images/switch16.png",
+    "32": "images/switch32.png",
+    "48": "images/switch48.png",
+    "128": "images/switch128.png"
+  },
+  "manifest_version": 2
+}
