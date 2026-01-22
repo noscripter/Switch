@@ -1,5 +1,33 @@
 {
+  "name": "switch",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --mode mv3",
+    "build": "node scripts/build.mjs",
+    "build:mv2": "node scripts/build.mjs mv2",
+    "build:mv3": "node scripts/build.mjs mv3",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"scripts/**/*.{js,mjs}\" vite.config.ts",
+    "format": "prettier -w ."
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
   "devDependencies": {
-    "eslint": "^7.32.0"
+    "@types/chrome": "^0.0.260",
+    "@types/react": "^18.2.22",
+    "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.34.1",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.2.5",
+    "sass": "^1.69.7",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0"
   }
 }
