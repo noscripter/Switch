@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getManagement, getRuntimeOrigin, getRuntimeUrl } from "../shared/chrome";
-import type { ExtensionInfo, IconInfo } from "../shared/types";
+import { getManagement, getRuntimeOrigin } from "../shared/chrome";
+import { getFallbackIconUrl, isFirefoxBrowser, resolveExtensionIcon } from "../shared/icons";
+import type { ExtensionInfo } from "../shared/types";
 
 const NAME_LIMIT = 18;
 
@@ -15,23 +16,7 @@ const getDisplayName = (extension: ExtensionInfo) => {
   return extension.shortName || extension.name || "Unknown";
 };
 
-const getIconUrl = (icons: IconInfo[] | undefined, runtimeOrigin: string | null) => {
-  if (icons && icons[0] && icons[0].url) {
-    const iconUrl = icons[0].url;
-    if (iconUrl.startsWith("moz-extension://") && runtimeOrigin) {
-      try {
-        const iconOrigin = new URL(iconUrl).origin;
-        if (iconOrigin !== runtimeOrigin) {
-          return getRuntimeUrl("images/null.jpg");
-        }
-      } catch {
-        return getRuntimeUrl("images/null.jpg");
-      }
-    }
-    return iconUrl;
-  }
-  return getRuntimeUrl("images/null.jpg");
-};
+const getIconPlaceholder = () => getFallbackIconUrl();
 
 const escapeRegExp = (value: string) => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -73,6 +58,7 @@ type AppProps = {
 const App = ({ managementOverride, initialExtensions = [], disableAutoLoad = false }: AppProps) => {
   const management = managementOverride ?? getManagement();
   const [extensions, setExtensions] = useState<ExtensionInfo[]>(initialExtensions);
+  const [iconMap, setIconMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(!disableAutoLoad);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +117,43 @@ const App = ({ managementOverride, initialExtensions = [], disableAutoLoad = fal
   };
 
   const runtimeOrigin = getRuntimeOrigin();
+  const isFirefox = isFirefoxBrowser();
+
+  useEffect(() => {
+    let active = true;
+    const objectUrls: string[] = [];
+
+    if (extensions.length === 0) {
+      setIconMap({});
+      return () => {
+        active = false;
+      };
+    }
+
+    const resolveIcons = async () => {
+      const entries = await Promise.all(
+        extensions.map(async (extension) => {
+          const url = await resolveExtensionIcon(extension, {
+            runtimeOrigin,
+            isFirefox,
+            trackObjectUrl: (value) => objectUrls.push(value)
+          });
+          return [extension.id, url] as const;
+        })
+      );
+
+      if (active) {
+        setIconMap(Object.fromEntries(entries));
+      }
+    };
+
+    resolveIcons();
+
+    return () => {
+      active = false;
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [extensions, runtimeOrigin, isFirefox]);
 
   return (
     <>
@@ -156,7 +179,7 @@ const App = ({ managementOverride, initialExtensions = [], disableAutoLoad = fal
           ? filtered.map((extension) => {
               const displayName = getDisplayName(extension);
               const shortenedName = truncateName(displayName);
-              const iconUrl = getIconUrl(extension.icons, runtimeOrigin);
+              const iconUrl = iconMap[extension.id] ?? getIconPlaceholder();
               const className = `${
                 extension.enabled ? "shortNameChecked" : "shortName"
               } extNameSpan`;
@@ -194,7 +217,7 @@ const App = ({ managementOverride, initialExtensions = [], disableAutoLoad = fal
                     onError={(event) => {
                       const target = event.currentTarget;
                       target.onerror = null;
-                      target.src = getRuntimeUrl("images/null.jpg");
+                      target.src = getIconPlaceholder();
                     }}
                   />
                   {extension.homepageUrl ? (

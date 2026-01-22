@@ -1,5 +1,5 @@
 import React from "react";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ExtensionInfo } from "../shared/types";
@@ -61,6 +61,7 @@ describe("Popup App", () => {
     resetGlobals();
     cleanup();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -205,11 +206,19 @@ describe("Popup App", () => {
     const invalidIcon = container.querySelector("#Invalid_icon") as HTMLImageElement | null;
     const brokenIconEl = container.querySelector("#Broken_icon") as HTMLImageElement | null;
 
-    expect(unknownIcon?.getAttribute("src")).toContain("images/null.jpg");
-    expect(mismatchIcon?.getAttribute("src")).toContain("images/null.jpg");
-    expect(invalidIcon?.getAttribute("src")).toContain("images/null.jpg");
+    await waitFor(() => {
+      expect(unknownIcon?.getAttribute("src")).toContain("images/null.jpg");
+    });
+    await waitFor(() => {
+      expect(invalidIcon?.getAttribute("src")).toContain("images/null.jpg");
+    });
+    await waitFor(() => {
+      expect(mismatchIcon?.getAttribute("src")).toBe("moz-extension://other/icon.png");
+    });
 
-    expect(brokenIconEl?.getAttribute("src")).toBe("http://bad/icon.png");
+    await waitFor(() => {
+      expect(brokenIconEl?.getAttribute("src")).toBe("http://bad/icon.png");
+    });
     fireEvent.error(brokenIconEl as HTMLImageElement);
     expect(brokenIconEl?.getAttribute("src")).toContain("images/null.jpg");
   });
@@ -244,7 +253,50 @@ describe("Popup App", () => {
 
     expect(await screen.findByText(/Runtime Null@1.0.0/)).toBeInTheDocument();
     const icon = container.querySelector('[id="Runtime Null_icon"]') as HTMLImageElement | null;
-    expect(icon?.getAttribute("src")).toBe("moz-extension://same/icon.png");
+    await waitFor(() => {
+      expect(icon?.getAttribute("src")).toBe("moz-extension://same/icon.png");
+    });
+  });
+
+  it("fetches moz-extension icons in firefox", async () => {
+    const extension = makeExtension({
+      id: "firefox",
+      name: "Firefox",
+      shortName: "Firefox",
+      icons: [{ size: 16, url: "moz-extension://other/icon.png" }]
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: vi.fn().mockResolvedValue(new Blob(["data"]))
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 Firefox/120.0" });
+
+    const originalCreateObjectURL = URL.createObjectURL;
+    if (!originalCreateObjectURL) {
+      Object.defineProperty(URL, "createObjectURL", {
+        value: () => "blob:icon",
+        writable: true,
+        configurable: true
+      });
+    }
+    const objectUrlMock = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:icon");
+
+    setupChrome([extension]);
+    const { container } = render(<App />);
+
+    expect(await screen.findByText(/Firefox@1.0.0/)).toBeInTheDocument();
+    const icon = container.querySelector("#Firefox_icon") as HTMLImageElement | null;
+
+    await waitFor(() => {
+      expect(icon?.getAttribute("src")).toBe("blob:icon");
+    });
+
+    objectUrlMock.mockRestore();
+    if (!originalCreateObjectURL) {
+      delete (URL as typeof URL & { createObjectURL?: unknown }).createObjectURL;
+    }
   });
 
   it("truncates long names in the label", async () => {
