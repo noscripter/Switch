@@ -78,11 +78,23 @@ const App = () => {
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     if (!keyword) {
-      return extensions;
+      return [...extensions].sort((a, b) => {
+        if (a.enabled === b.enabled) {
+          return getDisplayName(a).localeCompare(getDisplayName(b));
+        }
+        return a.enabled ? -1 : 1;
+      });
     }
-    return extensions.filter((extension) =>
-      getDisplayName(extension).toLowerCase().includes(keyword)
-    );
+    return extensions
+      .filter((extension) =>
+        getDisplayName(extension).toLowerCase().includes(keyword)
+      )
+      .sort((a, b) => {
+        if (a.enabled === b.enabled) {
+          return getDisplayName(a).localeCompare(getDisplayName(b));
+        }
+        return a.enabled ? -1 : 1;
+      });
   }, [extensions, query]);
 
   const handleToggle = (extension: ExtensionInfo) => {
@@ -144,6 +156,7 @@ const App = () => {
                   className="extension"
                   extId={extension.id}
                   extName={displayName}
+                  data-enabled={extension.enabled ? "true" : "false"}
                 >
                   <input
                     type="checkbox"
