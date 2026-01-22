@@ -43,6 +43,17 @@ describe("chrome helpers", () => {
     expect(getRuntimeOrigin()).toBe("moz-extension://test");
   });
 
+  it("uses browser runtime when management is absent", () => {
+    (globalThis as { browser?: unknown }).browser = {
+      runtime: {
+        getURL: (path: string) => `moz-extension://runtime/${path}`
+      }
+    };
+
+    expect(getManagement()).toBeNull();
+    expect(getRuntimeUrl("images/null.jpg")).toBe("moz-extension://runtime/images/null.jpg");
+  });
+
   it("returns null when api unavailable and handles invalid runtime urls", () => {
     (globalThis as { chrome?: chrome }).chrome = {
       runtime: {
@@ -57,5 +68,15 @@ describe("chrome helpers", () => {
     resetGlobals();
     expect(getManagement()).toBeNull();
     expect(getRuntimeUrl("images/null.jpg")).toBe("images/null.jpg");
+  });
+
+  it("returns origin for standard urls", () => {
+    (globalThis as { chrome?: chrome }).chrome = {
+      runtime: {
+        getURL: () => "https://example.com/path"
+      }
+    } as unknown as chrome;
+
+    expect(getRuntimeOrigin()).toBe("https://example.com");
   });
 });

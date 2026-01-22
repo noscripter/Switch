@@ -1,11 +1,6 @@
 import { expect, test } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const distPath = process.env.E2E_DIST ?? path.resolve(__dirname, "..", "dist", "mv2", "popup", "index.html");
-const fileUrl = `file://${distPath}`;
+const popupUrl = "/popup/index.html";
 
 const extensions = [
   {
@@ -30,19 +25,21 @@ const extensions = [
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(({ items }) => {
-    const mutable = items.map((item: typeof items[number]) => ({ ...item }));
-    (window as unknown as { chrome?: unknown }).chrome = {
+    const mutable = items.map((item) => ({ ...item }));
+    window.chrome = {
       runtime: {
-        getURL: (path: string) => `moz-extension://current/${path}`
+        getURL: (path) => `moz-extension://current/${path}`
       },
       management: {
-        getAll: (callback: (items: typeof mutable) => void) => callback(mutable),
-        setEnabled: (id: string, enabled: boolean, callback?: () => void) => {
+        getAll: (callback) => callback(mutable),
+        setEnabled: (id, enabled, callback) => {
           const target = mutable.find((item) => item.id === id);
           if (target) {
             target.enabled = enabled;
           }
-          callback?.();
+          if (callback) {
+            callback();
+          }
         }
       }
     };
@@ -50,7 +47,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("renders popup and keeps enabled extensions first", async ({ page }) => {
-  await page.goto(fileUrl);
+  await page.goto(popupUrl);
 
   await expect(page.getByText("Alpha@1.0.0")).toBeVisible();
   await expect(page.getByText("Beta@1.0.0")).toBeVisible();
@@ -60,7 +57,7 @@ test("renders popup and keeps enabled extensions first", async ({ page }) => {
 });
 
 test("filters by search and toggles enabled state", async ({ page }) => {
-  await page.goto(fileUrl);
+  await page.goto(popupUrl);
 
   const search = page.locator("#search");
   await search.fill("Beta");

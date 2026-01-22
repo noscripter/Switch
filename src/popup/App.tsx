@@ -56,6 +56,14 @@ const renderHighlighted = (text: string, query: string) => {
   });
 };
 
+const compareExtensions = (a: ExtensionInfo, b: ExtensionInfo) => {
+  const enabledDiff = Number(b.enabled) - Number(a.enabled);
+  if (enabledDiff !== 0) {
+    return enabledDiff;
+  }
+  return getDisplayName(a).localeCompare(getDisplayName(b));
+};
+
 type AppProps = {
   managementOverride?: chrome.management.Static | null;
   initialExtensions?: ExtensionInfo[];
@@ -99,23 +107,13 @@ const App = ({ managementOverride, initialExtensions = [], disableAutoLoad = fal
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     if (!keyword) {
-      return [...extensions].sort((a, b) => {
-        if (a.enabled === b.enabled) {
-          return getDisplayName(a).localeCompare(getDisplayName(b));
-        }
-        return a.enabled ? -1 : 1;
-      });
+      return [...extensions].sort(compareExtensions);
     }
     return extensions
       .filter((extension) =>
         getDisplayName(extension).toLowerCase().includes(keyword)
       )
-      .sort((a, b) => {
-        if (a.enabled === b.enabled) {
-          return getDisplayName(a).localeCompare(getDisplayName(b));
-        }
-        return a.enabled ? -1 : 1;
-      });
+      .sort(compareExtensions);
   }, [extensions, query]);
 
   const handleToggle = (extension: ExtensionInfo) => {
@@ -177,8 +175,8 @@ const App = ({ managementOverride, initialExtensions = [], disableAutoLoad = fal
                 <div
                   key={extension.id}
                   className="extension"
-                  extId={extension.id}
-                  extName={displayName}
+                  data-extid={extension.id}
+                  data-extname={displayName}
                   data-enabled={extension.enabled ? "true" : "false"}
                 >
                   <input

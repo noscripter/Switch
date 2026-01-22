@@ -4,9 +4,6 @@ type BrowserApi = {
 };
 
 const getBrowserApi = (): BrowserApi | null => {
-  if (typeof globalThis === "undefined") {
-    return null;
-  }
   const maybeBrowser = (globalThis as unknown as { browser?: BrowserApi }).browser;
   if (maybeBrowser?.management || maybeBrowser?.runtime) {
     return maybeBrowser;
@@ -38,7 +35,11 @@ export const getRuntimeUrl = (path: string) => {
 
 export const getRuntimeOrigin = () => {
   try {
-    return new URL(getRuntimeUrl("")).origin;
+    const url = new URL(getRuntimeUrl(""));
+    if (url.origin === "null" && url.protocol && url.host) {
+      return `${url.protocol}//${url.host}`;
+    }
+    return url.origin;
   } catch {
     return null;
   }

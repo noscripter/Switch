@@ -1,5 +1,5 @@
 import React from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ExtensionInfo } from "../shared/types";
@@ -23,7 +23,11 @@ const makeExtension = (overrides: Partial<ExtensionInfo>): ExtensionInfo => {
   } as ExtensionInfo;
 };
 
-const setupChrome = (extensions: ExtensionInfo[], asyncGetAll = false) => {
+const setupChrome = (
+  extensions: ExtensionInfo[],
+  asyncGetAll = false,
+  getURL?: (path: string) => string
+) => {
   const getAll = vi.fn((callback: (items: ExtensionInfo[]) => void) => {
     if (asyncGetAll) {
       setTimeout(() => callback(extensions), 0);
@@ -41,7 +45,7 @@ const setupChrome = (extensions: ExtensionInfo[], asyncGetAll = false) => {
       setEnabled
     } as unknown as chrome.management.Static,
     runtime: {
-      getURL: (path: string) => `moz-extension://current/${path}`
+      getURL: getURL ?? ((path: string) => `moz-extension://current/${path}`)
     }
   } as unknown as chrome;
 
@@ -55,6 +59,7 @@ describe("Popup App", () => {
 
   afterEach(() => {
     resetGlobals();
+    cleanup();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -65,7 +70,6 @@ describe("Popup App", () => {
   });
 
   it("shows loading state then renders sorted list and summary", async () => {
-    vi.useFakeTimers();
     const enabled = makeExtension({ id: "enabled", name: "Alpha", shortName: "Alpha", enabled: true });
     const disabled = makeExtension({ id: "disabled", name: "Beta", shortName: "Beta", enabled: false });
 
@@ -76,16 +80,16 @@ describe("Popup App", () => {
     expect(screen.getByText("loading...")).toBeInTheDocument();
 
     await act(async () => {
-      vi.runAllTimers();
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(await screen.findByText(/Alpha@1.0.0/)).toBeInTheDocument();
+    expect(screen.getByText(/Alpha@1.0.0/)).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
 
     const entries = container.querySelectorAll(".extension");
-    expect(entries[0]?.getAttribute("extname")).toBe("Alpha");
-    expect(entries[1]?.getAttribute("extname")).toBe("Beta");
+    expect(entries[0]?.getAttribute("data-extname")).toBe("Alpha");
+    expect(entries[1]?.getAttribute("data-extname")).toBe("Beta");
   });
 
   it("filters and highlights search results", async () => {
@@ -106,18 +110,42 @@ describe("Popup App", () => {
     expect(highlight).toHaveClass("highlight");
   });
 
+  it("sorts filtered results with enabled items first", async () => {
+    const enabled = makeExtension({ id: "alpha", name: "Alpha Tool", shortName: "Alpha Tool", enabled: true });
+    const disabled = makeExtension({ id: "beta", name: "Beta Tool", shortName: "Beta Tool", enabled: false });
+
+    setupChrome([disabled, enabled]);
+    const { container } = render(<App />);
+
+    expect(await screen.findByText(/Alpha Tool@1.0.0/)).toBeInTheDocument();
+
+    const input = screen.getByPlaceholderText(/Search/);
+    const user = userEvent.setup();
+    await user.type(input, "Tool");
+
+    const entries = container.querySelectorAll(".extension");
+    expect(entries[0]?.getAttribute("data-extname")).toBe("Alpha Tool");
+    expect(entries[1]?.getAttribute("data-extname")).toBe("Beta Tool");
+  });
+
   it("toggles extension enabled state", async () => {
     const disabled = makeExtension({ id: "gamma", name: "Gamma", shortName: "Gamma", enabled: false });
-    const { setEnabled } = setupChrome([disabled]);
+    const other = makeExtension({ id: "delta", name: "Delta", shortName: "Delta", enabled: true });
+    const { setEnabled } = setupChrome([disabled, other]);
 
-    render(<App />);
-    const checkbox = await screen.findByRole("checkbox");
+    const { container } = render(<App />);
+    expect(await screen.findByText(/Gamma@1.0.0/)).toBeInTheDocument();
+
+    const checkbox = container.querySelector("#gamma") as HTMLInputElement | null;
+    const otherCheckbox = container.querySelector("#delta") as HTMLInputElement | null;
     expect(checkbox).not.toBeChecked();
+    expect(otherCheckbox).toBeChecked();
 
-    await userEvent.click(checkbox);
+    await userEvent.click(checkbox as HTMLInputElement);
 
     expect(setEnabled).toHaveBeenCalledWith("gamma", true, expect.any(Function));
     expect(checkbox).toBeChecked();
+    expect(otherCheckbox).toBeChecked();
   });
 
   it("skips toggle when management is missing", async () => {
@@ -153,6 +181,12 @@ describe("Popup App", () => {
       shortName: "Mismatch",
       icons: [{ size: 16, url: "moz-extension://other/icon.png" }]
     });
+    const invalidUrlIcon = makeExtension({
+      id: "invalid",
+      name: "Invalid",
+      shortName: "Invalid",
+      icons: [{ size: 16, url: "moz-extension://[::1" }]
+    });
     const brokenIcon = makeExtension({
       id: "broken",
       name: "Broken",
@@ -160,18 +194,57 @@ describe("Popup App", () => {
       icons: [{ size: 16, url: "http://bad/icon.png" }]
     });
 
-    setupChrome([missingName, mismatchedIcon, brokenIcon]);
+    setupChrome([missingName, mismatchedIcon, invalidUrlIcon, brokenIcon]);
     const { container } = render(<App />);
 
     expect(await screen.findByText(/Unknown@1.0.0/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Unknown@1.0.0/ })).toBeNull();
 
-    const images = container.querySelectorAll("img.icons");
-    expect(images[0]?.getAttribute("src")).toContain("images/null.jpg");
-    expect(images[1]?.getAttribute("src")).toContain("images/null.jpg");
+    const unknownIcon = container.querySelector("#Unknown_icon") as HTMLImageElement | null;
+    const mismatchIcon = container.querySelector("#Mismatch_icon") as HTMLImageElement | null;
+    const invalidIcon = container.querySelector("#Invalid_icon") as HTMLImageElement | null;
+    const brokenIconEl = container.querySelector("#Broken_icon") as HTMLImageElement | null;
 
-    fireEvent.error(images[2] as HTMLImageElement);
-    expect(images[2]?.getAttribute("src")).toContain("images/null.jpg");
+    expect(unknownIcon?.getAttribute("src")).toContain("images/null.jpg");
+    expect(mismatchIcon?.getAttribute("src")).toContain("images/null.jpg");
+    expect(invalidIcon?.getAttribute("src")).toContain("images/null.jpg");
+
+    expect(brokenIconEl?.getAttribute("src")).toBe("http://bad/icon.png");
+    fireEvent.error(brokenIconEl as HTMLImageElement);
+    expect(brokenIconEl?.getAttribute("src")).toContain("images/null.jpg");
+  });
+
+  it("handles empty extension list from management", async () => {
+    (globalThis as { chrome?: chrome }).chrome = {
+      management: {
+        getAll: (callback: (items: ExtensionInfo[] | null) => void) => callback(null),
+        setEnabled: vi.fn()
+      } as unknown as chrome.management.Static,
+      runtime: {
+        getURL: (path: string) => `moz-extension://current/${path}`
+      }
+    } as unknown as chrome;
+
+    const { container } = render(<App />);
+
+    expect(await screen.findByText("0", { selector: "#enabled" })).toBeInTheDocument();
+    expect(container.querySelectorAll(".extension")).toHaveLength(0);
+  });
+
+  it("keeps moz-extension icon when runtime origin is unavailable", async () => {
+    const extension = makeExtension({
+      id: "runtime-null",
+      name: "Runtime Null",
+      shortName: "Runtime Null",
+      icons: [{ size: 16, url: "moz-extension://same/icon.png" }]
+    });
+
+    setupChrome([extension], false, () => "invalid-url");
+    const { container } = render(<App />);
+
+    expect(await screen.findByText(/Runtime Null@1.0.0/)).toBeInTheDocument();
+    const icon = container.querySelector('[id="Runtime Null_icon"]') as HTMLImageElement | null;
+    expect(icon?.getAttribute("src")).toBe("moz-extension://same/icon.png");
   });
 
   it("truncates long names in the label", async () => {
