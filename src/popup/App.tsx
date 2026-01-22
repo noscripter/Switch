@@ -56,10 +56,16 @@ const renderHighlighted = (text: string, query: string) => {
   });
 };
 
-const App = () => {
-  const management = getManagement();
-  const [extensions, setExtensions] = useState<ExtensionInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+type AppProps = {
+  managementOverride?: chrome.management.Static | null;
+  initialExtensions?: ExtensionInfo[];
+  disableAutoLoad?: boolean;
+};
+
+const App = ({ managementOverride, initialExtensions = [], disableAutoLoad = false }: AppProps) => {
+  const management = managementOverride ?? getManagement();
+  const [extensions, setExtensions] = useState<ExtensionInfo[]>(initialExtensions);
+  const [loading, setLoading] = useState(!disableAutoLoad);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -79,8 +85,12 @@ const App = () => {
   };
 
   useEffect(() => {
+    if (disableAutoLoad) {
+      setLoading(false);
+      return;
+    }
     loadExtensions();
-  }, []);
+  }, [disableAutoLoad]);
 
   const enabledCount = useMemo(() => {
     return extensions.filter((extension) => extension.enabled).length;
