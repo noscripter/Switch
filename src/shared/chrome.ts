@@ -1,6 +1,6 @@
 type BrowserApi = {
   management?: chrome.management.Static;
-  runtime?: { getURL?: (path: string) => string };
+  runtime?: { getURL?: (path: string) => string; id?: string };
 };
 
 const getBrowserApi = (): BrowserApi | null => {
@@ -31,6 +31,17 @@ export const getRuntimeUrl = (path: string) => {
     return browserApi.runtime.getURL(path);
   }
   return path;
+};
+
+export const getRuntimeId = () => {
+  if (typeof chrome !== "undefined" && chrome.runtime?.id) {
+    return chrome.runtime.id;
+  }
+  const browserApi = getBrowserApi();
+  if (browserApi?.runtime?.id) {
+    return browserApi.runtime.id;
+  }
+  return null;
 };
 
 export const getRuntimeOrigin = () => {

@@ -15,9 +15,9 @@ const makeExtension = (overrides: Partial<ExtensionInfo>): ExtensionInfo => {
   } as ExtensionInfo;
 };
 
-const setupRuntime = (getURL: (path: string) => string) => {
+const setupRuntime = (getURL: (path: string) => string, id = "runtime-id") => {
   (globalThis as { chrome?: chrome }).chrome = {
-    runtime: { getURL }
+    runtime: { getURL, id }
   } as unknown as chrome;
 };
 
@@ -105,6 +105,71 @@ describe("icons helpers", () => {
       runtimeOrigin: "moz-extension://current",
       isFirefox: true
     });
+    expect(icon).toBe(getFallbackIconUrl());
+  });
+
+  it("resolves relative icon urls for the current extension", async () => {
+    setupRuntime((path) => `moz-extension://current/${path}`, "self-id");
+    const extension = makeExtension({ id: "self-id", icons: [{ size: 16, url: "icons/icon.png" }] });
+    const icon = await resolveExtensionIcon(extension, {
+      runtimeOrigin: "moz-extension://current",
+      isFirefox: true
+    });
+    expect(icon).toBe("moz-extension://current/icons/icon.png");
+  });
+
+  it("builds chrome-extension urls for relative icons in chromium", async () => {
+    const extension = makeExtension({ id: "abcd", icons: [{ size: 16, url: "icons/icon.png" }] });
+    const icon = await resolveExtensionIcon(extension, {
+      runtimeOrigin: "moz-extension://current",
+      isFirefox: false
+    });
+    expect(icon).toBe("chrome-extension://abcd/icons/icon.png");
+  });
+
+  it("normalizes leading slashes in relative icon paths", async () => {
+    const extension = makeExtension({ id: "abcd", icons: [{ size: 16, url: "/icons/icon.png" }] });
+    const icon = await resolveExtensionIcon(extension, {
+      runtimeOrigin: "moz-extension://current",
+      isFirefox: false
+    });
+    expect(icon).toBe("chrome-extension://abcd/icons/icon.png");
+  });
+
+  it("falls back for relative icons when origin is unknown in firefox", async () => {
+    const extension = makeExtension({ id: "abcd", icons: [{ size: 16, url: "icons/icon.png" }] });
+    const icon = await resolveExtensionIcon(extension, {
+      runtimeOrigin: "moz-extension://current",
+      isFirefox: true
+    });
+    expect(icon).toBe(getFallbackIconUrl());
+  });
+
+  it("resolves relative icons using absolute optionsUrl", async () => {
+    const extension = makeExtension({
+      id: "opts",
+      optionsUrl: "moz-extension://opts/options.html",
+      icons: [{ size: 16, url: "icons/icon.png" }]
+    });
+    const icon = await resolveExtensionIcon(extension, {
+      runtimeOrigin: null,
+      isFirefox: true
+    });
+    expect(icon).toBe("moz-extension://opts/icons/icon.png");
+  });
+
+  it("falls back when optionsUrl is invalid", async () => {
+    const extension = makeExtension({
+      id: "opts-invalid",
+      optionsUrl: "moz-extension://[::1",
+      icons: [{ size: 16, url: "icons/icon.png" }]
+    });
+
+    const icon = await resolveExtensionIcon(extension, {
+      runtimeOrigin: "moz-extension://current",
+      isFirefox: true
+    });
+
     expect(icon).toBe(getFallbackIconUrl());
   });
 

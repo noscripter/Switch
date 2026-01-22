@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getManagement, getRuntimeOrigin, getRuntimeUrl } from "./chrome";
+import { getManagement, getRuntimeId, getRuntimeOrigin, getRuntimeUrl } from "./chrome";
 
 const resetGlobals = () => {
   delete (globalThis as { chrome?: unknown }).chrome;
@@ -20,13 +20,15 @@ describe("chrome helpers", () => {
     (globalThis as { chrome?: chrome }).chrome = {
       management,
       runtime: {
-        getURL: (path: string) => `chrome-extension://test/${path}`
+        getURL: (path: string) => `chrome-extension://test/${path}`,
+        id: "chrome-id"
       }
     } as unknown as chrome;
 
     expect(getManagement()).toBe(management);
     expect(getRuntimeUrl("images/null.jpg")).toBe("chrome-extension://test/images/null.jpg");
     expect(getRuntimeOrigin()).toBe("chrome-extension://test");
+    expect(getRuntimeId()).toBe("chrome-id");
   });
 
   it("falls back to browser namespace when chrome is missing", () => {
@@ -34,13 +36,15 @@ describe("chrome helpers", () => {
     (globalThis as { browser?: unknown }).browser = {
       management,
       runtime: {
-        getURL: (path: string) => `moz-extension://test/${path}`
+        getURL: (path: string) => `moz-extension://test/${path}`,
+        id: "browser-id"
       }
     };
 
     expect(getManagement()).toBe(management);
     expect(getRuntimeUrl("images/null.jpg")).toBe("moz-extension://test/images/null.jpg");
     expect(getRuntimeOrigin()).toBe("moz-extension://test");
+    expect(getRuntimeId()).toBe("browser-id");
   });
 
   it("uses browser runtime when management is absent", () => {
@@ -68,6 +72,16 @@ describe("chrome helpers", () => {
     resetGlobals();
     expect(getManagement()).toBeNull();
     expect(getRuntimeUrl("images/null.jpg")).toBe("images/null.jpg");
+  });
+
+  it("returns null runtime id when missing", () => {
+    (globalThis as { chrome?: chrome }).chrome = {
+      runtime: {
+        getURL: (path: string) => `chrome-extension://test/${path}`
+      }
+    } as unknown as chrome;
+
+    expect(getRuntimeId()).toBeNull();
   });
 
   it("returns origin for standard urls", () => {

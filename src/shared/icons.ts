@@ -1,5 +1,5 @@
 import type { ExtensionInfo, IconInfo } from "./types";
-import { getRuntimeUrl } from "./chrome";
+import { getRuntimeId, getRuntimeUrl } from "./chrome";
 
 const FALLBACK_ICON_PATH = "images/null.jpg";
 
@@ -26,6 +26,34 @@ export const isFirefoxBrowser = () => {
   return /firefox/i.test(navigator.userAgent);
 };
 
+const isAbsoluteUrl = (value: string) => /^[a-z][a-z0-9+.-]*:/.test(value);
+
+const resolveRelativeIconUrl = (
+  extension: ExtensionInfo,
+  iconPath: string,
+  isFirefox: boolean
+): string | null => {
+  const normalizedPath = iconPath.startsWith("/") ? iconPath.slice(1) : iconPath;
+  const runtimeId = getRuntimeId();
+  if (runtimeId && extension.id === runtimeId) {
+    return getRuntimeUrl(normalizedPath);
+  }
+
+  if (!isFirefox && extension.id) {
+    return `chrome-extension://${extension.id}/${normalizedPath}`;
+  }
+
+  if (extension.optionsUrl && isAbsoluteUrl(extension.optionsUrl)) {
+    try {
+      return new URL(normalizedPath, extension.optionsUrl).toString();
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+};
+
 type ResolveOptions = {
   runtimeOrigin: string | null;
   isFirefox: boolean;
@@ -42,7 +70,14 @@ export const resolveExtensionIcon = async (
     return getFallbackIconUrl();
   }
 
-  const iconUrl = iconInfo.url;
+  let iconUrl = iconInfo.url;
+  if (!isAbsoluteUrl(iconUrl)) {
+    const resolved = resolveRelativeIconUrl(extension, iconUrl, isFirefox);
+    if (!resolved) {
+      return getFallbackIconUrl();
+    }
+    iconUrl = resolved;
+  }
   if (!iconUrl.startsWith("moz-extension://")) {
     return iconUrl;
   }
